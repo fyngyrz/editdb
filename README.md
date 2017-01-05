@@ -18,7 +18,7 @@ On startup, command history is set to the previous query string (qs=)
 "./editdb.py" has no command line parameters. Commands are:
 quit q stop finish -- Exit
 help h ? ------------ Displays this help
-State state s ------- Displays settings
+State state s ------- Displays settings / status
  diag --------------- Displays state of DB object diagnosis flag
  diag=t|true|y|yes|f|false|n|no: - print db object upon query
   val --------------- Displays state of entry validation flag
@@ -28,6 +28,9 @@ State state s ------- Displays settings
 tables -------------- Display DB tables
    qs=SQL ----------- Set query/command string
    qs --------------- Displays query/command SQL string
+write w ------------- Writes the results of last query to ofile
+ofile=OutputFile ---- Sets the name of the output file
+ofile --------------- Reports output file name
 x exec -------------- Execute qs upon db
 ```
 

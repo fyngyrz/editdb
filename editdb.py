@@ -24,7 +24,7 @@ docstring =	"""Sqlite Database Editor "editdb.py"
                  written your congresscritter about patent and copyright
                  reform yet?
   Incep Date: December 1st, 2016
-     LastRev: December 14th, 2015
+     LastRev: January 4th, 2017
   LastDocRev: December 14th, 2015
  Tab spacing: 4 (set your editor to this for sane formatting while reading)
      Dev Env: OS X 10.6.8, Python 2.6.1
@@ -40,8 +40,9 @@ docstring =	"""Sqlite Database Editor "editdb.py"
                  is removed, ANYTHING may change.
        Usage: Run in shell like so:    python editdb.py
      1st-Rel: 1.0.0
-     Version: 1.0.0 Beta
+     Version: 1.0.1 Beta
      History:
+		1.0.1 - ofile and write commands added
 	 	1.0.0 - initial released
 
 	Todo:
@@ -81,6 +82,8 @@ thedb = None
 theqs = None
 displayDbl = False
 validate = False
+output = []
+ofnam = 'queryresult.txt'
 
 def lcmp(parm,s):
 	l = len(parm)
@@ -88,9 +91,8 @@ def lcmp(parm,s):
 		return True,l
 	return False,0
 
-
 def readdefaults():
-	global defname,theqs,thedb
+	global defname,theqs,thedb,ofnam
 	try:
 		fh = open(defname)
 	except:
@@ -104,10 +106,14 @@ def readdefaults():
 			f,r = lcmp('theqs=',line)
 			if f == True:
 				theqs = line[r:]
+			f,r = lcmp('ofile=',line)
+			print line
+			if f == True:
+				ofnam = line[r:]
 		fh.close()
 
 def writedefaults():
-	global defname,theqs,thedb
+	global defname,theqs,thedb,ofile
 	try:
 		fh = open(defname,'w')
 	except:
@@ -116,6 +122,7 @@ def writedefaults():
 		try:
 			if thedb != None:	fh.write('thedb='+str(thedb)+'\n')
 			if theqs != None: 	fh.write('theqs='+str(theqs)+'\n')
+			if ofnam != None: 	fh.write('ofile='+str(ofnam)+'\n')
 		except:
 			print 'could not finish writing to "'+defname+'", cannot save states'
 		try:
@@ -143,6 +150,9 @@ def uhelp():
 	print 'tables -------------- Display DB tables'
 	print '   qs=SQL ----------- Set query/command string'
 	print '   qs --------------- Displays query/command SQL string'
+	print 'write w ------------- Writes the results of last query to ofile'
+	print 'ofile=OutputFile ---- Sets the name of the output file'
+	print 'ofile --------------- Reports output file name'
 	print 'x exec -------------- Execute qs upon db'
 
 if len(sys.argv) != 1:
@@ -170,17 +180,35 @@ while run == 1:
 
 	elif ui == 'help' or ui == '?' or ui == 'h': uhelp()
 
+	elif ui[0:6] == 'ofile=':
+		ofnam = ui[6:]
+	elif ui == 'ofile':
+		print 'ofile='+ofnam
+
+	elif ui == 'write' or ui == 'w':
+		try:
+			fh = open(ofnam,'w')
+			for tup in output:
+				ctup = str(tup[0])
+				fh.write(ctup+'\n\n')
+			fh.close()
+		except Exception,e:
+			em = str(e)
+			print em
+
 	elif ui == 's' or ui == 'state':
 		quedcmd += ['val']
 		quedcmd += ['diag']
 		quedcmd += ['qs']
 		quedcmd += ['db']
+		quedcmd += ['ofile']
 
 	elif ui == 'x' or ui == 'exec':
 		if thedb != None:
 			if theqs != None:
 				a = dbl(thedb,theqs)
 				if a.mode == 'Query mode':
+					output = a.tuples
 					for tup in a.tuples:
 						print str(tup)
 					if displayDbl == True:
