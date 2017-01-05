@@ -29,6 +29,7 @@ docstring =	"""Sqlite Database Editor "editdb.py"
  Tab spacing: 4 (set your editor to this for sane formatting while reading)
      Dev Env: OS X 10.6.8, Python 2.6.1
    Add'l Env: Debian 8.6, Python 2.7.9
+   Add'l Env: Ubuntu 12.04.5 LTS, Python 2.7.3
 	  Status: BETA
     Policies: 1) I will make every effort to never remove functionality or
                  alter existing functionality once past BETA stage. Anything
