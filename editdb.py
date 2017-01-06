@@ -41,13 +41,20 @@ docstring =	"""Sqlite Database Editor "editdb.py"
                  is removed, ANYTHING may change.
        Usage: Run in shell like so:    python editdb.py
      1st-Rel: 1.0.0
-     Version: 1.0.1 Beta
+     Version: 1.0.2 Beta
      History:
+	    1.0.2 - ofile now quotes when invoked as status display
 		1.0.1 - ofile and write commands added
 	 	1.0.0 - initial released
 
 	Todo:
 		More DB commands
+		setup command to push preset strings to qs:
+			select  from  where  
+			insert  values () into 
+			delete from  where
+			create table
+			etc.
  Example session:
         ./editdb.py
         -->: db=test.db
@@ -184,7 +191,7 @@ while run == 1:
 	elif ui[0:6] == 'ofile=':
 		ofnam = ui[6:]
 	elif ui == 'ofile':
-		print 'ofile='+ofnam
+		print 'ofile="'+ofnam+'"'
 
 	elif ui == 'write' or ui == 'w':
 		try:
