@@ -7,11 +7,11 @@ class dbl(object):
 	     Contact: fyngyrz@gmail.com (bugs, feature requests, kudos)
 	     Project: aa_sqlite.py
 	  Incep Date: February 1st, 2015
-	     LastRev: April 8th, 2015
+	     LastRev: January 15th, 2017
 	  LastDocRev: April 14th, 2015
 	 Tab spacing: 4 (set your editor to this for sane formatting while reading)
 	     1st-Rel: 1.0.6
-	     Version: 1.0.8
+	     Version: 1.0.9
 	
 	The circumstances underlying why you would want to use this are:
 	
@@ -41,7 +41,8 @@ class dbl(object):
 	
 	Returning all the tuples is memory-heavy, as they all have to be fetched
 	and stored within the object. Benefit: You know how many rows you have
-	before you process them. This is "heavy" use of class dbl.
+	before you process them. This is "heavy" use of class dbl. memory is cheap,
+	and this is very effective if you are going to process all rows anyway.
 	
 	Returning one tuple at a time is memory-light, as only one tuple has to
 	be stored in the object at one time. Issue: You don't know how many rows
@@ -172,7 +173,34 @@ class dbl(object):
 	
 		...in this way, only the diags for the most recent deferred command will
 		be stored in the object at any one time.
-	
+		
+		Case Sensitivity
+		================
+		sqlite is, inexplicably, not case-sensitive with LIKE(); PostgreSQL
+		LIKE is case-sensitive, and ILIKE is case-insensitive. sqlite is both
+		missing ILIKE and has the sense of LIKE backwards. So that's kind of
+		a mess. There is a way to coerce sqlite into being case-sensitive,
+		and I've implemented it as a flag: cs=True.
+		
+		With cs=True either in the class instantiation or in a call to
+		dbl() with an extant object, LIKE is or becomes case-sensitive.
+		But now you don't have case INsensitivity. But there's an easy
+		way to make that happen in the query SQL.
+		
+		Say you have a db where the names column contains one name 'ben'
+		and one name 'Ben':
+		
+		case sensitive:
+		---------------
+		SELECT name FROM names WHERE name LIKE('ben)
+		result: 'ben'
+		
+		case INsensitive:
+		-----------------
+		SELECT name FROM names WHERE lower(name) LIKE('ben')
+		SELECT name FROM names WHERE upper(name) LIKE('BEN')
+		result: 'ben','Ben'
+		
 		Informational pragmas (but see note):
 		=====================================
 		dbl() knows how to return rows for:
@@ -183,7 +211,7 @@ class dbl(object):
 	
 		At the end of this module are some concrete examples that demonstrate
 		how to run commands and queries (both light and heavy), execute
-		deferred operations and so on.
+		deferred operations, demonstrate case-sensitivity,  and so on.
 		
 		You can actually run them. Just execute this file directly instead
 		of importing it, like this...
@@ -329,7 +357,6 @@ class dbl(object):
 				self.looping = 0
 			else:
 				self.rows += 1
-				self.qdiag('momma')
 				yield self.row
 		self.qdiag('fetchone() sequence completed normally')
 		if self.defer == True:
@@ -368,6 +395,17 @@ class dbl(object):
 		if self.c == None:
 			self.qdiag('Cursor not open, cannot execute')
 		else:
+			if self.cs == True and self.csset == False:
+				try:
+					self.c.execute('PRAGMA CASE_SENSITIVE_LIKE = On')
+				except Exception,e:
+					self.qerr('Unable to set CASE_SENSITIVE_LIKE: "'+str(e)+'"')
+					self.qdiag('Case sensitivity failed to set')
+				else:
+					self.qdiag('Case sensitivity set')
+					self.csset = True
+			else:
+				self.qdiag('Case insensitive mode')
 			try: self.c.execute(self.qs)
 			except:
 				self.qerr('Execute exception thrown, check query/cmd string')
@@ -375,11 +413,12 @@ class dbl(object):
 			else:
 				self.qdiag('conn.execute OK')
 
-	def dbl(self,qs='',defer=None,commit=None,lean=None):
+	def dbl(self,qs='',defer=None,commit=None,lean=None,cs=None):
 		if defer != None: self.defer = defer
 		if commit != None: self.commit = commit
 		if lean != None: self.lean = lean
 		if qs != '': self.qs = qs
+		if cs != None: self.cs = cs
 
 		if self.lean == True:
 			self.qdiag('lean detected true')
@@ -440,6 +479,17 @@ class dbl(object):
 				else:
 					self.qdiag('conn.cursor() OK')
 
+			if self.cs == True and self.csset == False:
+				try:
+					self.c.execute('PRAGMA CASE_SENSITIVE_LIKE = On')
+				except Exception,e:
+					self.qerr('Unable to set CASE_SENSITIVE_LIKE: "'+str(e)+'"')
+				else:
+					self.qdiag('Case sensitivity set')
+					self.csset = True
+			else:
+				self.qdiag('Case insensitive mode')
+
 			try: self.c.execute(self.qs)
 			except:
 				self.qerr('Execute exception thrown, check query/cmd string')
@@ -448,7 +498,14 @@ class dbl(object):
 #
 # we only have selects here if we're not in lean mode
 #
-				if self.qs[0:6].upper() == "SELECT" or self.qs[0:17].upper() == "PRAGMA TABLE_INFO":
+				sel1  = "SELECT"
+				prag1 = "PRAGMA TABLE_INFO"
+				prag2 = 'PRAGMA CASE_SENSITIVE_LIKE'
+
+				if	self.qs[0:len(sel1)].upper() == sel1 or \
+					self.qs[0:len(prag1)].upper() == prag1:
+#					self.qs[0:len(prag2)].upper() == prag2:
+
 					if self.qs[0:6].upper() == "SELECT":
 						self.mode = "Query mode"
 					else:
@@ -492,7 +549,7 @@ class dbl(object):
 # forth. See class documentation for examples of use.
 # -----------------------------------------------------
 
-	def __init__(self,dbn='',qs='',defer=False,commit=True,lean=False):
+	def __init__(self,dbn='',qs='',defer=False,commit=True,lean=False,cs=False):
 		self.dbn    = dbn
 		self.qs     = qs
 		self.rows   = 0
@@ -506,6 +563,8 @@ class dbl(object):
 		self.c      = None
 		self.err    = None
 		self.ec     = 0
+		self.cs     = cs
+		self.csset	= False
 		self.diag   = None
 		self.dbl()
 
@@ -673,30 +732,22 @@ if __name__ == "__main__":
 	else:
 		fh.close()
 
-	sql = "SELECT theuni,ip FROM ips WHERE theuni IS NOT NULL LIMIT 10"
-
 	# HEAVY way
 	# =========
 	# You get all the tuples at once in a.tuples
 	# a.rows tells you how many tuples you got
 	# ------------------------------------------
-	a = dbl(thedb,sql)
-	for tup in a.tuples:
-		print str(tup)
 
-	# LIGHT way
-	# =========
+	# LIGHT way (lean=True)
+	# =====================
 	# b.rows is a *counter* that increments
 	# as you get tuples, not a total. You
 	# get one tuple every time you call
 	# object.tup()
 	# ---------------------------------
-	b = dbl(thedb,sql,lean=True)
-	for tup in b.tup():
-		print str(b.rows)+': '+str(tup[0])+','+str(tup[1])
 
-	# Heavy deferred example:
-	# -----------------------
+	# Heavy deferred commit example:
+	# -------------------------------
 	print 'Heavy:'
 	a = dbl(thedb,'',True,False)							# open, deferred commit
 	a.dbl("UPDATE thesn SET unibase = unibase + 1")			# increment SN
@@ -725,4 +776,65 @@ if __name__ == "__main__":
 
 	a.cmt()													# DB committed,closed here
 
-# don't mix light and heavy techniques on the same object!
+# ...don't mix light and heavy techniques on the same object!
+
+	# Here are light and heavy query examples
+	# Also demonstrations of case-sensitity management
+	# Note the distinction between mode and method
+	# ------------------------------------------------
+	thedb = 'mytestnames.db'
+	# if demo db doesn't exist, create it
+	# -----------------------------------
+	try:
+		fh = open(thedb)
+	except:
+		nt = ('Ben','haben','mobendar','benjy','ben','Sheila')
+		a = dbl(thedb,"create table names(uname text)")
+		for tup in nt:
+			b = dbl(thedb,"insert into names (uname) VALUES ('"+tup+"')")
+	else:
+		fh.close()
+
+	print "heavy, case-insensitive mode"
+	sql = "SELECT uname FROM names WHERE uname LIKE('ben')"
+	a = dbl(thedb,sql)
+	for tup in a.tuples:
+		print str(tup)
+
+	print "light, case-insensitive mode"
+	sql = "SELECT uname FROM names WHERE uname LIKE('ben')"
+	a = dbl(thedb,sql,lean=True)
+	for tup in a.tup():
+		print str(tup)
+	a.close()
+
+	print "heavy, case-sensistive mode, case-sensitive method"
+	sql = "SELECT uname FROM names WHERE uname LIKE('ben')"
+	a = dbl(thedb,sql,cs=True)
+	for tup in a.tuples:
+		print str(tup)
+
+	print "heavy, case-sensistive mode, case-insensitive method"
+	sql = "SELECT uname FROM names WHERE lower(uname) LIKE('ben')"
+	a = dbl(thedb,sql,cs=True)
+	for tup in a.tuples:
+		print str(tup)
+
+	print "light, case-sensistive mode, case-sensitive method"
+	sql = "SELECT uname FROM names WHERE uname LIKE('ben')"
+	a = dbl(thedb,sql,lean=True,cs=True)
+	for tup in a.tup():
+		print str(tup)
+	a.close()
+
+	print "light, case-sensistive mode, case-insensitive method"
+	sql = "SELECT uname FROM names WHERE lower(uname) LIKE('ben')"
+	a = dbl(thedb,sql,lean=True,cs=True)
+	for tup in a.tup():
+		print str(tup)
+	print 'demonstrating cs=True is sticky with connection open:'
+	sql = "SELECT uname FROM names WHERE uname LIKE('ben%')"
+	a = dbl(thedb,sql,lean=True,cs=True)
+	for tup in a.tup():
+		print str(tup)
+	a.close()
