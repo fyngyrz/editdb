@@ -2,16 +2,51 @@ import sqlite3
 
 class dbl(object):
 	"""Class to simplify access to sqlite3.
-	
-	      Author: fyngyrz  (Ben)
-	     Contact: fyngyrz@gmail.com (bugs, feature requests, kudos)
-	     Project: aa_sqlite.py
-	  Incep Date: February 1st, 2015
-	     LastRev: January 15th, 2017
-	  LastDocRev: April 14th, 2015
-	 Tab spacing: 4 (set your editor to this for sane formatting while reading)
-	     1st-Rel: 1.0.6
-	     Version: 1.0.9
+      Author: fyngyrz  (Ben)
+     Contact: fyngyrz@gmail.com
+              (bugs, feature requests, kudos, bitter rejections)
+     Project: aa_sqlite.py
+    Homepage: https://github.com/fyngyrz/aa_sqlite
+     License: None. It's free. *Really* free.
+              Defy invalid social and legal norms.
+ Disclaimers: 1) Probably completely broken. Do Not Use.
+                 You were explicitly warned. Phbbbbt.
+              2) My code is blackbox, meaning I wrote it without reference
+                 to OPC (other people's code.)
+              3) I can't check other people's contributions effectively,
+                 so if you use any version of aa_sqlite.py that incorporates
+                 accepted commits from others, you are risking the use of
+                 OPC, which may or may not be protected by copyright,
+                 patent, and the like, because our intellectual property
+                 system is pathological. The risks and responsibilities and
+                 any subsequent consequences are entirely yours. Have you
+                 written your congresscritter about patent and copyright
+                 reform yet?
+      Incep Date: February 1st, 2015
+         LastRev: January 15th, 2017
+      LastDocRev: January 15th, 2017
+     Tab spacing: 4 (set your editor to this for sane formatting while reading)
+     Dev Env: OS X 10.6.8, Python 2.6.1
+   Add'l Env: Debian 8.6, Python 2.7.9
+   Add'l Env: Ubuntu 12.04.5 LTS, Python 2.7.3
+	  Status: BETA
+    Policies: 1) I will make every effort to never remove functionality or
+                 alter existing functionality once past BETA stage. Anything
+                 new will be implemented as something new, thus preserving all
+                 behavior. The only intentional exceptions to this are if a
+                 bug is found that does not match the intended behavior,
+                 or I determine there is some kind of security risk. Remember,
+                 this only applies to production code. Until the BETA status
+                 is removed, ANYTHING may change.
+       Usage: Run examples in shell like so:    python aa_sqlite.py
+              Otherwise, it's an import library. See details below.
+     1st-Rel: 1.0.6
+     Version: 1.0.9
+     History:
+	    1.0.9 - case-sensitivity issues with sqlite addressed
+		1.0.8 - bugfixes
+		1.0.7 - bugfixes
+		1.0.6 - first public release
 	
 	The circumstances underlying why you would want to use this are:
 	
@@ -29,26 +64,27 @@ class dbl(object):
 	.tuples, or can be iterated for each tuple, which are the query data,
 	and .rows which tells how many (if any) rows were, or have been, retreived.
 	
-	In addition, there are three very handy utiltity functions that serve to
+	In addition, there are three very handy utility functions that serve to
 	keep DB data just the way you want (details above each function, below)::
 	
 		def sqclean2html(string):        # cleans up single quotes for HTML use
 		def sqclean2esc(string):         # cleans up single quotes for literal use
 		def launder(string,alsothis=''): # can clean up anything. :)
 	
-	As for the main tool, class dbl, you have a choice with queries, either heavy
-	or light memory use:
+	As for the main tool, class dbl, you have a choice with queries,
+	either heavy or light memory use:
 	
-	Returning all the tuples is memory-heavy, as they all have to be fetched
-	and stored within the object. Benefit: You know how many rows you have
-	before you process them. This is "heavy" use of class dbl. memory is cheap,
-	and this is very effective if you are going to process all rows anyway.
+	Returning all the tuples is memory-heavy, as they all have to be
+	fetched and stored within the object. Benefit: You know how many
+	rows you have before you process them. This is "heavy" use of class
+	dbl. memory is cheap, and this is very effective if you are going to
+	process all rows anyway.
 	
-	Returning one tuple at a time is memory-light, as only one tuple has to
-	be stored in the object at one time. Issue: You don't know how many rows
-	will be retrieved, although object.rows is always set to how many rows
-	have been retrieved *thus far* as you retrieve additional rows. This  is
-	"light" use of class dbl.
+	Returning one tuple at a time is memory-light, as only one tuple has
+	to be stored in the object at one time. Issue: You don't know how
+	many rows will be retrieved, although object.rows is always set to
+	how many rows have been retrieved *thus far* as you retrieve
+	additional rows. This  is "light" use of class dbl.
 	
 	The object is printable, like so...
 	
@@ -96,11 +132,11 @@ class dbl(object):
 	
 	------------- Outline of Use ---------------------
 	
-	Basic memory heavy query operation:
+	Basic memory heavy query operation with case sensitive like:
 	
-	    a = dbl(dbname,sqlSELECT)        # db is closed upon object creation
-	    for tup in a.tuples:             # all SELECTed data is now in object
-	        # do things with tup[0...n]  # db already closed
+	    a = dbl(dbname,sqlSELECT,cs=True) # db is closed upon object creation
+	    for tup in a.tuples:              # all SELECTed data is now in object
+	        # do things with tup[0...n]   # db already closed
 	
 	Basic memory light query operation:
 	
@@ -148,19 +184,19 @@ class dbl(object):
 			print str(tup)					# do something with each as fetched
 		a.cmt()								# commits the changes
 		
-		Some explanation:
-		-----------------
-		These forms of use allow you to atomically change data without
-		anyone else getting in between you and the change on read OR
-		write operations. The DB is read/write locked for any other
-		accessing code other than YOUR object until you commit (so
-		don't hold on to that commit too long!) You can read the
-		changes you have made back with a deferred mode read, as
-		shown just above. This is ideal for utilizing a guaranteed
-		monotonically increasing index or serial number. Locked
-		databases will wait a little bit to see if the lock goes
-		away before they return an error. So quick operations as
-		shown here don't interfere with other users.
+		Some explanation about deferred operations:
+		-------------------------------------------
+		The deferred forms of use allow you to atomically change data
+		without anyone else getting in between you and the change on
+		read OR write operations. The DB is read/write locked for any
+		other accessing code other than YOUR object until you commit (so
+		don't hold on to that commit too long!) You can read the changes
+		you have made back with a deferred mode read, as shown just
+		above. This is ideal for utilizing a guaranteed monotonically
+		increasing index or serial number. Locked databases will wait a
+		little bit to see if the lock goes away before they return an
+		error. So quick operations as shown here don't interfere with
+		other users.
 	
 	*** Diagnostics normally accrue during deferred commit operations.
 		Because of this, you may wish to reset them prior to each op...
@@ -176,11 +212,14 @@ class dbl(object):
 		
 		Case Sensitivity
 		================
-		sqlite is, inexplicably, not case-sensitive with LIKE(); PostgreSQL
-		LIKE is case-sensitive, and ILIKE is case-insensitive. sqlite is both
-		missing ILIKE and has the sense of LIKE backwards. So that's kind of
-		a mess. There is a way to coerce sqlite into being case-sensitive,
-		and I've implemented it as a flag: cs=True.
+		
+		sqlite is, inexplicably, not case-sensitive with LIKE();
+		PostgreSQL LIKE is case-sensitive, and its ILIKE is
+		case-insensitive. Which makes sense. sqlite's default
+		approach... does not make sense. sqlite is both missing ILIKE
+		and has the sense of LIKE backwards. So that's kind of a mess.
+		There is a way to coerce sqlite's LIKE into being
+		case-sensitive, and I've implemented it as a flag: cs=True.
 		
 		With cs=True either in the class instantiation or in a call to
 		dbl() with an extant object, LIKE is or becomes case-sensitive.
@@ -220,8 +259,7 @@ class dbl(object):
 	
 		...and the examples will run. Examining them and their outputs may
 		be enlightening.
-		
-	"""
+"""
 
 # Accumulates errors in user-reportable form
 # ------------------------------------------
