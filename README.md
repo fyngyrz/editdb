@@ -22,6 +22,8 @@ State state s ------- Displays settings / status
  diag --------------- Displays state of DB object diagnosis flag
  diag=t|true|y|yes|f|false|n|no: - print db object upon query
   val --------------- Displays state of entry validation flag
+   cs=t|true|y|yes|f|false|n|no: - set case sensitivity flag
+   cs --------------- Displays state of case sensitivity flag
   val=t|true|y|yes|f|false|n|no: - confirm settings when entered
    db=Database ------ Set database to work with
    db --------------- Displays database
@@ -33,6 +35,31 @@ ofile=OutputFile ---- Sets the name of the output file
 ofile --------------- Reports output file name
 x exec -------------- Execute qs upon db
 ```
+
+## Case sensitivity or lack thereof
+
+sqlite has a most annoying quirk, in that the LIKE operator is, by
+default, case INsensitive. PostgreSQL implements LIKE as case-sensitive,
+and also offers ILIKE, which is case-insensitive, as implied by the "I".
+All very sane.
+
+If cs=True, then editdb sets an option to tell sqlite to change
+the LIKE operator to case-sensitive. It's not as nice has having
+ILIKE, but you can then mix case-sensitive and case-insensitive
+operations as you prefer. Here's how that works:
+
+Say you have a db that contains 'ben' and 'Ben' in the firstname column
+of table names, and you've set cs=True.
+
+Case sensitive:
+
+    SELECT firstname FROM names WHERE firstname LIKE('ben')
+	result = 'ben'
+
+Case insensitive:
+
+	SELECT firstname FROM names WHERE lower(firstname) LIKE('ben')
+	result = 'ben','Ben'
 
 ## Example Session:
 

@@ -24,8 +24,8 @@ docstring =	"""Sqlite Database Editor "editdb.py"
                  written your congresscritter about patent and copyright
                  reform yet?
   Incep Date: December 1st, 2016
-     LastRev: January 4th, 2017
-  LastDocRev: December 14th, 2015
+     LastRev: January 15th, 2017
+  LastDocRev: january 15th, 2017
  Tab spacing: 4 (set your editor to this for sane formatting while reading)
      Dev Env: OS X 10.6.8, Python 2.6.1
    Add'l Env: Debian 8.6, Python 2.7.9
@@ -41,8 +41,9 @@ docstring =	"""Sqlite Database Editor "editdb.py"
                  is removed, ANYTHING may change.
        Usage: Run in shell like so:    python editdb.py
      1st-Rel: 1.0.0
-     Version: 1.0.2 Beta
+     Version: 1.0.3 Beta
      History:
+	 	1.0.3 - case insensitivity handling for LIKE
 	    1.0.2 - ofile now quotes when invoked as status display
 		1.0.1 - ofile and write commands added
 	 	1.0.0 - initial released
@@ -90,6 +91,7 @@ thedb = None
 theqs = None
 displayDbl = False
 validate = False
+casesens = True
 output = []
 ofnam = 'queryresult.txt'
 
@@ -100,7 +102,7 @@ def lcmp(parm,s):
 	return False,0
 
 def readdefaults():
-	global defname,theqs,thedb,ofnam
+	global defname,theqs,thedb,ofnam,casesens
 	try:
 		fh = open(defname)
 	except:
@@ -111,6 +113,12 @@ def readdefaults():
 			f,r = lcmp('thedb=',line)
 			if f == True:
 				thedb = line[r:]
+			f,r = lcmp('cs=',line)
+			if f == True:
+				if line[r:] == 'True':
+					casesens = True
+				else:
+					casesens = False
 			f,r = lcmp('theqs=',line)
 			if f == True:
 				theqs = line[r:]
@@ -121,7 +129,7 @@ def readdefaults():
 		fh.close()
 
 def writedefaults():
-	global defname,theqs,thedb,ofile
+	global defname,theqs,thedb,ofile,casesens
 	try:
 		fh = open(defname,'w')
 	except:
@@ -131,6 +139,7 @@ def writedefaults():
 			if thedb != None:	fh.write('thedb='+str(thedb)+'\n')
 			if theqs != None: 	fh.write('theqs='+str(theqs)+'\n')
 			if ofnam != None: 	fh.write('ofile='+str(ofnam)+'\n')
+			if ofnam != None: 	fh.write('cs='+str(casesens)+'\n')
 		except:
 			print 'could not finish writing to "'+defname+'", cannot save states'
 		try:
@@ -139,6 +148,7 @@ def writedefaults():
 			print 'Could not close "'+defname+'"file!'
 
 def boolr(p):
+	p = p.lower()
 	if p == 't' or p == 'true' or p == 'y' or p == 'yes': return True,True
 	if p == 'f' or p == 'false' or p == 'n' or p == 'no': return True,False
 	print 'Don\'t understand "'+p+'"'
@@ -153,6 +163,8 @@ def uhelp():
 	print ' diag='+tfs+': - print db object upon query'
 	print '  val --------------- Displays state of entry validation flag'
 	print '  val='+tfs+': - confirm settings when entered'
+	print '   cs --------------- Displays state of case sensitivity flag'
+	print '  cs='+tfs+': - Set case sensitivity flag'
 	print '   db=Database ------ Set database to work with'
 	print '   db --------------- Displays database'
 	print 'tables -------------- Display DB tables'
@@ -208,13 +220,14 @@ while run == 1:
 		quedcmd += ['val']
 		quedcmd += ['diag']
 		quedcmd += ['qs']
+		quedcmd += ['cs']
 		quedcmd += ['db']
 		quedcmd += ['ofile']
 
 	elif ui == 'x' or ui == 'exec':
 		if thedb != None:
 			if theqs != None:
-				a = dbl(thedb,theqs)
+				a = dbl(thedb,theqs,cs=casesens)
 				if a.mode == 'Query mode':
 					output = a.tuples
 					for tup in a.tuples:
@@ -228,12 +241,12 @@ while run == 1:
 					print 'Cannot display results'
 
 	elif ui == 't' or ui == 'tables':
-		a = dbl(thedb,'SELECT name FROM sqlite_master ORDER BY name')
+		a = dbl(thedb,'SELECT name FROM sqlite_master ORDER BY name',cs=casesens)
 		if a.rows != 0:
 			for tup in a.tuples:
 				tbl = str(tup[0])
 				print tbl
-				b = dbl(thedb,"SELECT sql FROM sqlite_master WHERE tbl_name = '"+tbl+"' AND type = 'table'")
+				b = dbl(thedb,"SELECT sql FROM sqlite_master WHERE tbl_name = '"+tbl+"' AND type = 'table'",cs=casesens)
 				if b.rows != 0:
 					craw = str(b.tuples[0][0])
 					junk,cols = craw.split('(',1)
@@ -252,6 +265,14 @@ while run == 1:
 				quedcmd += ['val']
 	elif ui == 'val':
 		print 'val='+str(validate)
+
+	elif ui[0:3] == 'cs=':
+		pf,r = boolr(ui[3:])
+		if pf == True:
+			casesens = r
+			quedcmd += ['cs']
+	elif ui == 'cs':
+		print 'cs='+str(casesens)
 
 	elif ui[0:5] == 'diag=':
 		pf,r = boolr(ui[5:])
